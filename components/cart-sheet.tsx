@@ -1,6 +1,6 @@
 'use client';
 
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/lib/store/cart';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,15 +15,16 @@ import Image from 'next/image';
 import { useEffect, useState, useTransition } from 'react';
 import { checkout } from '@/lib/actions/checkout';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export function CartSheet() {
   const cart = useCartStore();
+  const router = useRouter();
   // 处理 Hydration Mismatch: 
   // LocalStorage 的内容在服务端渲染时不存在，会导致客户端和服务端 HTML 不一致。
   // 必须确保只在客户端渲染购物车内容。
   const [isMounted, setIsMounted] = useState(false);
   const [isPending, startTransition] = useTransition(); // 用于处理 Server Action 的 loading 状态
-  // const router = useRouter(); // 暂时未使用，等实现订单详情页时启用
 
   // 处理 Hydration Mismatch: 确保只在客户端渲染购物车内容
   // 这是处理 SSR hydration mismatch 的标准做法
@@ -46,17 +47,19 @@ export function CartSheet() {
 
       // 2. 处理结果
       if (result.error) {
-        toast.error(result.error);
-        if (result.error.includes('Insufficient stock')) {
-          // 可选：提示用户哪个商品没货了
-          toast.error('Some items are out of stock. Please adjust your cart.');
+        toast.error('结算失败', {
+          description: result.error,
+        });
+        if (result.error.includes('Insufficient stock') || result.error.includes('库存不足')) {
+          toast.error('部分商品库存不足，请调整购物车。');
         }
       } else if (result.success) {
-        toast.success('Order placed successfully!');
+        toast.success('订单创建成功！');
         cart.clearCart(); // 清空购物车
-        // 3. 跳转到订单成功页 (稍后实现 /orders/[id])
-        // router.push(`/orders/${result.orderId}`); 
-        // 暂时先刷新或留在此处
+        // 3. 跳转到订单详情页
+        if (result.orderId) {
+          router.push(`/orders/${result.orderId}`);
+        }
       }
     });
   };
@@ -64,66 +67,111 @@ export function CartSheet() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="icon" className="relative">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="relative"
+          data-cart-button
+        >
           <ShoppingCart className="h-4 w-4" />
           {cart.items.length > 0 && (
-            <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-primary text-xs text-primary-foreground flex items-center justify-center">
+            <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-[#D7001D] text-xs text-white flex items-center justify-center font-semibold animate-pulse">
               {cart.totalItems()}
             </span>
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent>
+      <SheetContent className="flex flex-col">
         <SheetHeader>
-          <SheetTitle>Shopping Cart</SheetTitle>
+          <SheetTitle className="text-xl">购物车</SheetTitle>
         </SheetHeader>
         
-        <div className="flex flex-col gap-4 py-6 flex-1 overflow-y-auto max-h-[70vh]">
+        <div className="flex flex-col gap-4 py-6 flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
           {cart.items.length === 0 ? (
-            <p className="text-muted-foreground text-center">Your cart is empty.</p>
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <ShoppingCart className="h-16 w-16 text-muted-foreground/30 mb-4" />
+              <p className="text-muted-foreground text-lg">购物车是空的</p>
+              <p className="text-sm text-muted-foreground mt-2">快去挑选心仪的商品吧！</p>
+            </div>
           ) : (
             cart.items.map((item) => (
-              <div key={item.id} className="flex gap-4 items-center">
-                <div className="relative w-16 h-16 rounded overflow-hidden bg-gray-100 flex-shrink-0">
-                  {item.image && <Image src={item.image} alt={item.name} fill className="object-cover" />}
+              <div key={item.id} className="flex gap-4 items-start p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="relative w-20 h-20 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0 border">
+                  {item.image ? (
+                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+                      无图片
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-sm line-clamp-1">{item.name}</h4>
-                  <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                    <button onClick={() => cart.updateQuantity(item.id, item.quantity - 1)}>-</button>
-                    <span>{item.quantity}</span>
-                    <button onClick={() => cart.updateQuantity(item.id, item.quantity + 1)}>+</button>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm line-clamp-2 mb-2">{item.name}</h4>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => cart.updateQuantity(item.id, item.quantity - 1)}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="text-sm font-medium min-w-[2rem] text-center">{item.quantity}</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => cart.updateQuantity(item.id, item.quantity + 1)}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium text-sm">${(item.price * item.quantity).toFixed(2)}</div>
-                  <button 
-                    onClick={() => cart.removeItem(item.id)}
-                    className="text-xs text-red-500 hover:underline mt-1"
-                  >
-                    Remove
-                  </button>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-semibold text-[#D7001D]">
+                      ¥{(item.price * item.quantity).toFixed(2)}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        cart.removeItem(item.id);
+                        toast.success('已移除', {
+                          description: `${item.name} 已从购物车移除`,
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
 
-        <SheetFooter className="mt-auto border-t pt-4">
+        {cart.items.length > 0 && (
+          <SheetFooter className="mt-auto border-t pt-4 space-y-4">
             <div className="w-full space-y-4">
-                <div className="flex justify-between font-bold text-lg">
-                    <span>Total:</span>
-                    <span>${cart.totalPrice().toFixed(2)}</span>
-                </div>
-                <Button 
-                  className="w-full" 
-                  onClick={handleCheckout} 
-                  disabled={isPending || cart.items.length === 0}
-                >
-                  {isPending ? 'Processing...' : 'Checkout'}
-                </Button>
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-semibold">合计:</span>
+                <span className="text-2xl font-bold text-[#D7001D]">
+                  ¥{cart.totalPrice().toFixed(2)}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground text-center">
+                共 {cart.totalItems()} 件商品
+              </div>
+              <Button 
+                className="w-full bg-[#D7001D] hover:bg-[#B8001A] text-white h-12 text-base font-semibold" 
+                onClick={handleCheckout} 
+                disabled={isPending || cart.items.length === 0}
+              >
+                {isPending ? '处理中...' : '去结算'}
+              </Button>
             </div>
-        </SheetFooter>
+          </SheetFooter>
+        )}
       </SheetContent>
     </Sheet>
   );
