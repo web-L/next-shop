@@ -1,0 +1,81 @@
+// 1. 生成器配置
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 2. 数据源配置
+datasource db {
+  provider = "postgresql"
+}
+
+// 3. 用户模型
+model User {
+  id        String   @id @default(cuid()) // 使用 CUID 作为主键，比 UUID 更适合 URL
+  email     String   @unique
+  password  String // 加密后的密码
+  name      String?
+  role      Role     @default(USER) // 角色管理
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // 关系
+  orders    Order[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// 4. 商品模型
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Decimal  @db.Decimal(10, 2) // 价格必须用 Decimal 避免精度丢失
+  image       String?
+  stock       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关系
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+}
+
+// 5. 分类模型
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  products  Product[]
+}
+
+// 6. 订单模型 (后续阶段会详细讲，先占位)
+model Order {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  total     Decimal     @db.Decimal(10, 2)
+  status    OrderStatus @default(PENDING)
+  items     OrderItem[]
+  createdAt DateTime    @default(now())
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2) // 记录下单时的单价
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
