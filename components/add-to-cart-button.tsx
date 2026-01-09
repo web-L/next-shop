@@ -26,15 +26,15 @@ export function AddToCartButton({ product }: AddToCartButtonProps) {
       quantity: 1,
     });
     
-    toast.success("Added to cart", {
-      description: `${product.name} has been added to your cart.`,
+    toast.success("已添加到购物车", {
+      description: `${product.name} 已添加到您的购物车。`,
     });
   };
 
   return (
-    <Button size="lg" className="flex-1" onClick={handleAddToCart}>
+    <Button size="lg" className="flex-1 bg-[#D7001D] hover:bg-[#B8001A] text-white" onClick={handleAddToCart}>
       <ShoppingCart className="mr-2 h-4 w-4" />
-      Add to Cart
+      加入购物车
     </Button>
   );
 }

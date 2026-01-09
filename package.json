@@ -7,11 +7,6 @@
     "dev:turbo": "next dev",
     "build": "next build",
     "start": "next start",
-    "postinstall": "prisma generate",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:seed": "prisma db seed",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "lint": "eslint"
   },
   "dependencies": {
@@ -25,6 +20,7 @@
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "next-auth": "^5.0.0-beta.30",

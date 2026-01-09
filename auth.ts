@@ -33,7 +33,13 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           
           // 密码比对
           const passwordsMatch = await bcrypt.compare(password, user.password);
-          if (passwordsMatch) return user;
+          if (passwordsMatch) {
+            return {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+            };
+          }
         }
 
         console.error('Invalid credentials');

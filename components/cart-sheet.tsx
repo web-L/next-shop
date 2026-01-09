@@ -12,7 +12,9 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
+import { checkout } from '@/lib/actions/checkout';
+import { toast } from 'sonner';
 
 export function CartSheet() {
   const cart = useCartStore();
@@ -20,9 +22,44 @@ export function CartSheet() {
   // LocalStorage 的内容在服务端渲染时不存在，会导致客户端和服务端 HTML 不一致。
   // 必须确保只在客户端渲染购物车内容。
   const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => setIsMounted(true), []);
+  const [isPending, startTransition] = useTransition(); // 用于处理 Server Action 的 loading 状态
+  // const router = useRouter(); // 暂时未使用，等实现订单详情页时启用
+
+  // 处理 Hydration Mismatch: 确保只在客户端渲染购物车内容
+  // 这是处理 SSR hydration mismatch 的标准做法
+  // 注意：React Compiler 可能会警告在 effect 中同步调用 setState，
+  // 但这是处理 hydration mismatch 的标准模式，可以安全忽略
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMounted(true);
+  }, []);
 
   if (!isMounted) return null;
+
+  const handleCheckout = async () => {
+    startTransition(async () => {
+      // 1. 调用 Server Action
+      const result = await checkout(cart.items.map(item => ({
+        id: item.id,
+        quantity: item.quantity
+      })));
+
+      // 2. 处理结果
+      if (result.error) {
+        toast.error(result.error);
+        if (result.error.includes('Insufficient stock')) {
+          // 可选：提示用户哪个商品没货了
+          toast.error('Some items are out of stock. Please adjust your cart.');
+        }
+      } else if (result.success) {
+        toast.success('Order placed successfully!');
+        cart.clearCart(); // 清空购物车
+        // 3. 跳转到订单成功页 (稍后实现 /orders/[id])
+        // router.push(`/orders/${result.orderId}`); 
+        // 暂时先刷新或留在此处
+      }
+    });
+  };
 
   return (
     <Sheet>
@@ -78,7 +115,13 @@ export function CartSheet() {
                     <span>Total:</span>
                     <span>${cart.totalPrice().toFixed(2)}</span>
                 </div>
-                <Button className="w-full">Checkout</Button>
+                <Button 
+                  className="w-full" 
+                  onClick={handleCheckout} 
+                  disabled={isPending || cart.items.length === 0}
+                >
+                  {isPending ? 'Processing...' : 'Checkout'}
+                </Button>
             </div>
         </SheetFooter>
       </SheetContent>

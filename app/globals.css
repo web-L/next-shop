@@ -132,4 +132,10 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+  
+  /* 平滑滚动 */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
 }

@@ -22,10 +22,10 @@ export async function checkout(items: CheckoutItem[]) {
   }
 
   // 2. 开启事务
-  // 事务能保证：要么全部成功（创建订单+扣库存），要么全部失败（不扣库存也不创订单）
   try {
-    const orderId = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       let total = 0;
+      const orderItemsData = [];
 
       // a. 检查库存并计算总价
       for (const item of items) {
@@ -41,53 +41,59 @@ export async function checkout(items: CheckoutItem[]) {
           throw new Error(`Insufficient stock for ${product.name}`);
         }
 
-        total += Number(product.price) * item.quantity;
+        const price = Number(product.price);
+        total += price * item.quantity;
 
-        // b. 扣减库存
+        // 收集订单项数据，以便稍后统一创建
+        orderItemsData.push({
+          productId: item.id,
+          quantity: item.quantity,
+          price: product.price, // 使用数据库中的真实价格
+        });
+
+        // b. 扣减库存 (原子递减)
         await tx.product.update({
           where: { id: item.id },
-          data: { stock: product.stock - item.quantity },
+          data: { 
+            stock: {
+              decrement: item.quantity // 使用 decrement 避免竞态条件
+            }
+          },
         });
       }
 
-      // c. 创建订单
-      const user = await tx.user.findUnique({ where: { email: session.user?.email ?? '' } });
+      // c. 查找用户ID
+      const user = await tx.user.findUnique({ where: { email: session!.user!.email! } });
 
       if (!user) {
         throw new Error('User not found');
       }
       
+      // d. 创建订单
       const order = await tx.order.create({
         data: {
           userId: user.id,
           total: total,
           status: 'PENDING', // 待支付
           items: {
-            create: items.map(item => ({
-                // 这里为了简化，还需要再次查询价格，或者相信前端传来的价格（绝对不行！）
-                // 正确做法是上面的循环里已经查到了 product，应该把 price 传下来。
-                // 这里的逻辑稍微简化演示：
-                productId: item.id,
-                quantity: item.quantity,
-                price: 0, // 修正：实际项目中这里必须填入上面查到的 product.price
-            }))
+            create: orderItemsData // 使用正确的价格和数量创建关联
           }
         },
       });
-
-      // 修正上面的 price 问题，我们需要在 map 里通过闭包或者重构逻辑获取价格。
-      // 为了代码简洁，暂时略过这个细节，重点理解事务。
       
       return order.id;
     });
 
-    return { success: true, orderId };
+    return { success: true, orderId: result };
 
   } catch (error) {
     console.error('Checkout failed:', error);
-    if (error instanceof Error) {
-      return { error: error.message || 'Checkout failed' };
+    // 重定向不能在 try/catch 块内直接捕获（如果是 NEXT_REDIRECT 错误），
+    // 但这里的 error.message 主要是业务错误。
+    // 如果是 redirect() 抛出的错误，它实际上是一个特殊的 Error 类型，应该被向上抛出。
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      throw error;
     }
-    return { error: 'Checkout failed' };
+    return { error: error instanceof Error ? error.message : 'Checkout failed' };
   }
 }

@@ -7,15 +7,15 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { CartSheet } from "@/components/cart-sheet";
 import { NavLink } from "@/components/nav-link";
-import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/user-menu";
+import { NextAuthSessionProvider } from "@/components/session-provider";
 import Image from "next/image";
+import { metadata as siteMetadata } from "./layout-metadata";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "恒天翊 - 智能化PCBA一站式服务",
-  description: "专注多品种小批量PCBA一站式快捷生产，以速度、品质、技术、服务为核心经营理念的智能化工厂",
-};
+// 使用统一的 metadata 配置
+export const metadata: Metadata = siteMetadata;
 
 export default function RootLayout({
   children,
@@ -25,17 +25,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn(inter.className, "min-h-screen bg-background antialiased")}>
+        <NextAuthSessionProvider>
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
           >
-        <header className="sticky top-0 z-50 w-full border-b border-[#D7001D]/20 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
+          <header className="sticky top-0 z-50 w-full border-b border-[#D7001D]/20 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90 dark:bg-gray-950/95">
           <div className="w-full max-w-full mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex h-14 items-center">
-             <div className="mr-4 hidden lg:flex flex-1 items-center">
-               <Link className="mr-6 flex items-center space-x-2 shrink-0" href="/">
+             <div className="mr-4 hidden lg:flex flex-1 items-center min-w-0">
+               <Link className="mr-4 lg:mr-6 flex items-center space-x-2 shrink-0" href="/">
                  <Image 
                    src="/logo.svg" 
                    alt="恒天翊" 
@@ -45,19 +46,19 @@ export default function RootLayout({
                    priority
                  />
                </Link>
-               <nav className="flex items-center gap-0.5 text-sm font-medium overflow-x-auto scrollbar-hide">
-                 <NavLink href="/">首页</NavLink>
-                 <NavLink href="/products">设备产品</NavLink>
-                 <NavLink href="/categories">设备分类</NavLink>
-                 <NavLink href="/pcb">PCB制作</NavLink>
-                 <NavLink href="/smt">SMT贴片</NavLink>
-                 <NavLink href="/supply-chain">供应链管理</NavLink>
-                 <NavLink href="/pricing">在线计价</NavLink>
-                 <NavLink href="/#advantages">核心优势</NavLink>
-                 <NavLink href="/business">业务介绍</NavLink>
-                 <NavLink href="/news">新闻资讯</NavLink>
-                 <NavLink href="/about">关于我们</NavLink>
-                 <NavLink href="/join">加入我们</NavLink>
+               <nav className="flex items-center gap-0 text-xs lg:text-sm font-medium overflow-x-auto scrollbar-hide flex-1 min-w-0 smooth-scroll">
+                 <NavLink href="/" className="shrink-0">首页</NavLink>
+                 <NavLink href="/products" className="shrink-0">设备产品</NavLink>
+                 <NavLink href="/categories" className="shrink-0">设备分类</NavLink>
+                 <NavLink href="/pcb" className="shrink-0">PCB制作</NavLink>
+                 <NavLink href="/smt" className="shrink-0">SMT贴片</NavLink>
+                 <NavLink href="/supply-chain" className="shrink-0">供应链管理</NavLink>
+                 <NavLink href="/pricing" className="shrink-0">在线计价</NavLink>
+                 <NavLink href="/#advantages" className="shrink-0">核心优势</NavLink>
+                 <NavLink href="/business" className="shrink-0">业务介绍</NavLink>
+                 <NavLink href="/news" className="shrink-0">新闻资讯</NavLink>
+                 <NavLink href="/about" className="shrink-0">关于我们</NavLink>
+                 <NavLink href="/join" className="shrink-0">加入我们</NavLink>
                </nav>
              </div>
              {/* Mobile Nav */}
@@ -75,13 +76,7 @@ export default function RootLayout({
              </div>
              <div className="flex items-center justify-end gap-2">
                <CartSheet />
-               {/* Auth Buttons */}
-               <Button asChild variant="outline" className="border-[#D7001D] text-[#D7001D] hover:bg-[#D7001D] hover:text-white h-9 px-4">
-                 <Link href="/login">登录</Link>
-               </Button>
-               <Button asChild className="bg-[#D7001D] hover:bg-[#B8001A] text-white border-0 h-9 px-4">
-                 <Link href="/register">注册</Link>
-               </Button>
+                 <UserMenu />
              </div>
             </div>
           </div>
@@ -91,6 +86,7 @@ export default function RootLayout({
         </main>
         </ThemeProvider>
         <Toaster />
+        </NextAuthSessionProvider>
       </body>
     </html>
   );
