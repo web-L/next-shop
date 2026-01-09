@@ -1,0 +1,19 @@
+## Required (Neon + NextAuth)
+#
+# Neon 提供两种连接串：
+# - Pooled connection string：适合 serverless/runtime（Vercel 运行时）
+# - Direct connection string：适合 migrate/seed（长连接/DDL）
+#
+# 建议在生产环境：
+#   DATABASE_URL = pooled
+#   DIRECT_URL   = direct
+#
+DATABASE_URL="postgresql://USER:PASSWORD@EP-xxxxxx-pooler.REGION.aws.neon.tech/DB?sslmode=require"
+DIRECT_URL="postgresql://USER:PASSWORD@EP-xxxxxx.REGION.aws.neon.tech/DB?sslmode=require"
+
+# NextAuth v5 (Auth.js)
+AUTH_SECRET="replace-with-a-strong-random-secret"
+
+# 可选：某些反向代理/平台上需要显式信任 Host（Vercel 一般不需要，但加上也安全）
+AUTH_TRUST_HOST="true"
+

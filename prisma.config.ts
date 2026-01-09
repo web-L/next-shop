@@ -10,6 +10,9 @@ export default defineConfig({
     seed: "ts-node prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Prisma Migrate/Seed 建议优先使用直连（Neon direct）
+    // - DIRECT_URL: Neon direct connection string（推荐用于 migrate/seed）
+    // - DATABASE_URL: Neon pooled / 本地 docker（回退）
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });
